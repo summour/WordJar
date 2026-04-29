@@ -1,22 +1,28 @@
-// WordJar Save Safety V3
-// Local data must survive API quota issues, reloads, and iOS page closes.
-// Saves immediately to the main key, keeps a last-good local mirror, and verifies writes.
+// WordJar Save Safety V4
+// Local data must survive JSON imports, reloads, iOS page closes, and temporary storage pressure.
+// Saves immediately to the main key, keeps last-good mirrors, validates backup shape before replacing data,
+// and can recover the last imported JSON backup if the main localStorage key is overwritten or starts empty.
 
 (function installSavePerformance() {
   if (window.__wordjarSavePerformanceInstalled) return;
   window.__wordjarSavePerformanceInstalled = true;
 
   const originalSave = window.save;
-  const originalHandleJSONImport = window.handleJSONImport;
   const originalClearAll = window.clearAll;
   const DURABLE_BACKUP_KEY = `${SK}_last_good_local_backup`;
+  const LAST_IMPORTED_BACKUP_KEY = `${SK}_last_imported_json_backup`;
 
   if (typeof originalSave !== 'function') return;
+
+  function safeNow() {
+    try { return new Date().toISOString(); }
+    catch (err) { return String(Date.now()); }
+  }
 
   function stampLocalChange(reason = 'local-save') {
     try {
       D.meta = D.meta || {};
-      D.meta.updatedAt = new Date().toISOString();
+      D.meta.updatedAt = safeNow();
       D.meta.updatedBy = reason;
     } catch (err) {
       // D is not ready yet. Let the save flow continue.
@@ -62,8 +68,11 @@
 
     try {
       localStorage.setItem(DURABLE_BACKUP_KEY, payload);
+      if (reason === 'json-import' || reason === 'cloud-load') {
+        localStorage.setItem(LAST_IMPORTED_BACKUP_KEY, payload);
+      }
     } catch (mirrorError) {
-      // The main app save already succeeded. The mirror is best-effort only.
+      // The main app save already succeeded. Mirrors are best-effort only.
     }
   }
 
@@ -80,31 +89,140 @@
     return Array.isArray(data?.words) ? data.words.length : 0;
   }
 
-  function restoreLastGoodBackupIfNeeded() {
-    const mainData = readJSON(SK);
-    const mirrorData = readJSON(DURABLE_BACKUP_KEY);
+  function countDecks(data) {
+    return Array.isArray(data?.decks) ? data.decks.length : 0;
+  }
 
-    if (!mirrorData) return;
+  function getUpdatedAtMs(data) {
+    const value = data?.meta?.updatedAt || data?.exportedAt || data?.updatedAt || data?.updatedAtClient;
+    const ms = value ? Date.parse(value) : 0;
+    return Number.isFinite(ms) ? ms : 0;
+  }
 
-    const currentWordCount = countWords(D);
-    const mainWordCount = countWords(mainData);
-    const mirrorWordCount = countWords(mirrorData);
+  function looksLikeWordJarData(data) {
+    return !!data && typeof data === 'object' && Array.isArray(data.words);
+  }
 
-    if (mirrorWordCount > Math.max(currentWordCount, mainWordCount)) {
-      D = mirrorData;
-      if (typeof normalizeWordDeckIds === 'function') normalizeWordDeckIds();
-      persistWordJarData('restore-last-good-local-backup');
+  function parsePossiblyStringified(value) {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    if (!trimmed) throw new Error('Empty backup value');
+    return JSON.parse(trimmed);
+  }
 
-      if (typeof refreshAllVisibleUI === 'function') refreshAllVisibleUI();
-      else {
-        if (typeof updateHome === 'function') updateHome();
-        if (typeof renderWords === 'function') renderWords();
-        if (typeof renderDecks === 'function') renderDecks();
-        if (typeof updateAccount === 'function') updateAccount();
-      }
+  function extractWordJarData(parsed, depth = 0) {
+    if (depth > 4) throw new Error('Backup nesting is too deep');
+    const value = parsePossiblyStringified(parsed);
 
-      if (typeof toast === 'function') toast('Restored local backup');
+    if (!value || typeof value !== 'object') throw new Error('Invalid backup file');
+
+    // Current WordJar export: { app, version, exportedAt, data: { words, decks, ... } }
+    if (looksLikeWordJarData(value.data)) return value.data;
+
+    // Direct app-state export: { words, decks, profile, ... }
+    if (looksLikeWordJarData(value)) return value;
+
+    // Some browser/localStorage backup tools export the saved value under a key.
+    if (value[SK]) return extractWordJarData(value[SK], depth + 1);
+    if (value.wordjar_v4) return extractWordJarData(value.wordjar_v4, depth + 1);
+    if (value.localStorage?.[SK]) return extractWordJarData(value.localStorage[SK], depth + 1);
+    if (value.storage?.[SK]) return extractWordJarData(value.storage[SK], depth + 1);
+
+    // Legacy exports may use cards instead of words.
+    if (Array.isArray(value.cards)) {
+      return {
+        ...value,
+        words: value.cards,
+        decks: Array.isArray(value.decks) ? value.decks : []
+      };
     }
+
+    throw new Error('This JSON does not contain WordJar words data');
+  }
+
+  function normalizeImportedWordJarData(parsed) {
+    const data = extractWordJarData(parsed);
+    const normalized = typeof normalizeWordJarData === 'function'
+      ? normalizeWordJarData(data)
+      : { ...data };
+
+    if (!Array.isArray(normalized.words)) {
+      throw new Error('Invalid backup: words must be an array');
+    }
+
+    if (!Array.isArray(normalized.decks)) normalized.decks = [];
+    normalized.profile = normalized.profile || {};
+    normalized.studyDays = normalized.studyDays || {};
+    normalized.settings = normalized.settings || {};
+    normalized.meta = normalized.meta || {};
+    normalized.meta.updatedAt = safeNow();
+    normalized.meta.updatedBy = 'json-import';
+
+    return normalized;
+  }
+
+  // Make the global normalizer stricter for later modules too. The old version silently converted
+  // unknown JSON into empty words/decks, which could replace real data with nothing.
+  window.normalizeWordJarImportedBackup = normalizeImportedWordJarData;
+
+  function chooseRecoveryCandidate() {
+    const mainData = readJSON(SK);
+    const durableData = readJSON(DURABLE_BACKUP_KEY);
+    const importedData = readJSON(LAST_IMPORTED_BACKUP_KEY);
+
+    const candidates = [
+      { source: 'main', data: mainData, priority: 1 },
+      { source: 'last-good', data: durableData, priority: 2 },
+      { source: 'last-imported-json', data: importedData, priority: 3 }
+    ].filter(item => item.data && Array.isArray(item.data.words));
+
+    if (!candidates.length) return null;
+
+    candidates.sort((a, b) => {
+      const wordDiff = countWords(b.data) - countWords(a.data);
+      if (wordDiff) return wordDiff;
+      const deckDiff = countDecks(b.data) - countDecks(a.data);
+      if (deckDiff) return deckDiff;
+      const timeDiff = getUpdatedAtMs(b.data) - getUpdatedAtMs(a.data);
+      if (timeDiff) return timeDiff;
+      return b.priority - a.priority;
+    });
+
+    return candidates[0];
+  }
+
+  function restoreLastGoodBackupIfNeeded() {
+    const currentWords = countWords(D);
+    const mainData = readJSON(SK);
+    const mainWords = countWords(mainData);
+    const best = chooseRecoveryCandidate();
+
+    if (!best || best.source === 'main') return;
+
+    const bestWords = countWords(best.data);
+    const bestDecks = countDecks(best.data);
+    const shouldRestore =
+      bestWords > Math.max(currentWords, mainWords) ||
+      (best.source === 'last-imported-json' && bestWords > 0 && mainWords <= 3 && bestWords >= mainWords) ||
+      (!mainData && bestWords > 0) ||
+      (mainData && mainWords === 0 && bestWords > 0) ||
+      (currentWords === 0 && bestWords > 0);
+
+    if (!shouldRestore) return;
+
+    D = best.data;
+    if (typeof normalizeWordDeckIds === 'function') normalizeWordDeckIds();
+    persistWordJarData(`restore-${best.source}`);
+
+    if (typeof refreshAllVisibleUI === 'function') refreshAllVisibleUI();
+    else {
+      if (typeof updateHome === 'function') updateHome();
+      if (typeof renderWords === 'function') renderWords();
+      if (typeof renderDecks === 'function') renderDecks();
+      if (typeof updateAccount === 'function') updateAccount();
+    }
+
+    if (typeof toast === 'function') toast(`Restored ${bestWords} words from local backup`);
   }
 
   window.flushWordJarSave = function flushWordJarSave() {
@@ -124,13 +242,18 @@
     reader.onload = e => {
       try {
         const parsed = JSON.parse(e.target.result);
-        const restored = normalizeWordJarData(parsed.data || parsed);
+        const restored = normalizeImportedWordJarData(parsed);
 
-        if (!Array.isArray(restored.words) || !Array.isArray(restored.decks)) {
-          throw new Error('Invalid structure');
+        const restoredWordCount = countWords(restored);
+        const restoredDeckCount = countDecks(restored);
+        const currentWordCount = countWords(D);
+
+        if (restoredWordCount === 0 && currentWordCount > 0) {
+          const allowEmpty = confirm('This JSON backup has 0 words. Restoring it will erase the current local words. Continue?');
+          if (!allowEmpty) return;
         }
 
-        const confirmed = confirm('Restore this JSON backup? This will replace current local WordJar data.');
+        const confirmed = confirm(`Restore this JSON backup?\n\nWords: ${restoredWordCount}\nDecks: ${restoredDeckCount}\n\nThis will replace current local WordJar data.`);
         if (!confirmed) return;
 
         D = restored;
@@ -141,7 +264,7 @@
         persistWordJarData('json-import');
 
         const verified = readJSON(SK);
-        if (countWords(verified) !== countWords(D)) {
+        if (countWords(verified) !== countWords(D) || countDecks(verified) !== countDecks(D)) {
           throw new Error('Imported data was not written correctly');
         }
 
@@ -156,7 +279,7 @@
         toast(`JSON backup restored · ${countWords(D)} words saved locally`);
       } catch (err) {
         console.error('WordJar JSON import failed:', err);
-        alert('Import failed or could not be saved locally. No data was changed. Try Export JSON again, then clear temporary caches from Storage Health.');
+        alert(`Import failed. No data was changed.\n\n${err?.message || 'Invalid WordJar JSON backup.'}`);
       } finally {
         if (event?.target) event.target.value = '';
       }
@@ -175,18 +298,27 @@
       const result = originalClearAll.apply(this, arguments);
       try {
         const mainData = readJSON(SK);
-        if (!mainData || countWords(mainData) === 0) localStorage.removeItem(DURABLE_BACKUP_KEY);
+        if (!mainData || countWords(mainData) === 0) {
+          localStorage.removeItem(DURABLE_BACKUP_KEY);
+          localStorage.removeItem(LAST_IMPORTED_BACKUP_KEY);
+        }
       } catch (err) {}
       return result;
     };
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') persistWordJarData('page-hidden');
+    if (document.visibilityState !== 'hidden') return;
+    try { persistWordJarData('page-hidden'); } catch (err) { console.warn('WordJar page-hidden save failed', err); }
   });
 
-  window.addEventListener('pagehide', () => persistWordJarData('page-hide'));
-  window.addEventListener('beforeunload', () => persistWordJarData('before-unload'));
+  window.addEventListener('pagehide', () => {
+    try { persistWordJarData('page-hide'); } catch (err) { console.warn('WordJar page-hide save failed', err); }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    try { persistWordJarData('before-unload'); } catch (err) { console.warn('WordJar before-unload save failed', err); }
+  });
 
   setTimeout(restoreLastGoodBackupIfNeeded, 0);
 })();
