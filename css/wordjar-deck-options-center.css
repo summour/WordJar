@@ -1,0 +1,62 @@
+/* WordJar Deck Options Center Fix
+   Scoped only to the learning settings modal. */
+
+.app #deckOptionsModal.overlay {
+  align-items: center;
+  justify-content: center;
+  padding: max(18px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(18px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+}
+
+.app #deckOptionsModal.overlay.open {
+  display: flex;
+}
+
+.app #deckOptionsModal .modal-card {
+  width: min(390px, calc(100vw - 40px));
+  max-width: min(390px, calc(100vw - 40px));
+  max-height: min(82vh, 720px);
+  margin: auto;
+  box-sizing: border-box;
+  border-radius: 28px;
+  overflow-x: hidden;
+}
+
+.app #deckOptionsModal .modal-header {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.app #deckOptionsModal .settings-card {
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.app #deckOptionsModal .fi,
+.app #deckOptionsModal input,
+.app #deckOptionsModal select,
+.app #deckOptionsModal textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.app #deckOptionsModal .opt-row {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 430px) {
+  .app #deckOptionsModal.overlay {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .app #deckOptionsModal .modal-card {
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    max-height: 84vh;
+    border-radius: 26px;
+  }
+}
