@@ -1,33 +1,32 @@
-// WordJar Study Calendar V4
-// Real inline monthly calendar for Dashboard + Calendar Settings.
+// WordJar Study Calendar V5
+// Centered weekly calendar for Dashboard + Calendar Settings.
 
 (function installWordJarStudyCalendar() {
-  if (window.__wordjarStudyCalendarInstalledV4) return;
-  window.__wordjarStudyCalendarInstalledV4 = true;
+  if (window.__wordjarStudyCalendarInstalledV5) return;
+  window.__wordjarStudyCalendarInstalledV5 = true;
 
   const STYLE_ID = 'wordjarStudyCalendarStyle';
   const SETTINGS_MODAL_ID = 'wordjarCalendarSettingsModal';
   const SETTINGS_ROW_ID = 'wordjarCalendarSettingsRow';
   const DEFAULT_COLOR = '#0b5f08';
   const PRESET_COLORS = ['#0b5f08', '#09090b', '#f59e0b', '#3b82f6', '#ef4444', '#a855f7'];
-  const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   let calendarKey = '';
   let selectedDate = new Date();
-  let monthCursor = new Date();
+  let weekCursor = new Date();
 
   function ensureCalendarSettings() {
     window.D = window.D || {};
     D.settings = D.settings || {};
     if (!D.settings.calendarAccentColor) D.settings.calendarAccentColor = DEFAULT_COLOR;
-    if (!['sun', 'mon'].includes(D.settings.calendarWeekStart)) D.settings.calendarWeekStart = 'sun';
+    if (!['sun', 'mon'].includes(D.settings.calendarWeekStart)) D.settings.calendarWeekStart = 'mon';
     applyCalendarColor();
   }
 
   function applyCalendarColor() {
-    const color = D.settings?.calendarAccentColor || DEFAULT_COLOR;
-    document.documentElement.style.setProperty('--wordjar-calendar-accent', color);
+    document.documentElement.style.setProperty('--wordjar-calendar-accent', D.settings?.calendarAccentColor || DEFAULT_COLOR);
   }
 
   function getCalendarColor() {
@@ -37,16 +36,11 @@
 
   function getWeekStartMode() {
     ensureCalendarSettings();
-    return D.settings.calendarWeekStart || 'sun';
+    return D.settings.calendarWeekStart || 'mon';
   }
 
   function getWeekStartIndex() {
-    return getWeekStartMode() === 'mon' ? 1 : 0;
-  }
-
-  function getOrderedDayNames() {
-    const start = getWeekStartIndex();
-    return Array.from({ length: 7 }, (_, index) => DAY_NAMES[(start + index) % 7]);
+    return getWeekStartMode() === 'sun' ? 0 : 1;
   }
 
   function dateKey(date) {
@@ -63,12 +57,29 @@
     return next;
   }
 
-  function getMonthDates(cursor) {
-    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const start = new Date(first);
-    const diff = (first.getDay() - getWeekStartIndex() + 7) % 7;
-    start.setDate(first.getDate() - diff);
-    return Array.from({ length: 42 }, (_, index) => addDays(start, index));
+  function startOfWeek(date) {
+    const start = new Date(date);
+    start.setHours(12, 0, 0, 0);
+    const diff = (start.getDay() - getWeekStartIndex() + 7) % 7;
+    start.setDate(start.getDate() - diff);
+    return start;
+  }
+
+  function getWeekDates(date) {
+    const start = startOfWeek(date);
+    return Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  }
+
+  function getWeekTitle(dates) {
+    const first = dates[0];
+    const last = dates[6];
+    if (sameDay(new Date(), selectedDate) && sameDay(startOfWeek(new Date()), startOfWeek(weekCursor))) return 'This Week';
+    if (first.getMonth() === last.getMonth()) return `${MONTH_NAMES[first.getMonth()]} ${first.getFullYear()}`;
+    return `${MONTH_NAMES[first.getMonth()]} – ${MONTH_NAMES[last.getMonth()]}`;
+  }
+
+  function getShortDate(date) {
+    return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
   function isStudiedDate(date) {
@@ -78,10 +89,6 @@
 
   function getSelectedReviewedCount() {
     return sameDay(selectedDate, new Date()) ? Number(D.todayDone || 0) : null;
-  }
-
-  function getMonthStudyCount(cursor) {
-    return getMonthDates(cursor).filter(date => date.getMonth() === cursor.getMonth() && isStudiedDate(date)).length;
   }
 
   function getDueNowCount() {
@@ -99,7 +106,7 @@
 
   function getCalendarStateKey() {
     return [
-      dateKey(monthCursor),
+      dateKey(startOfWeek(weekCursor)),
       dateKey(selectedDate),
       Number(D.todayDone || 0),
       JSON.stringify(D.studyDays || {}),
@@ -107,6 +114,10 @@
       getCalendarColor(),
       getWeekStartMode()
     ].join('::');
+  }
+
+  function clearCalendarCache() {
+    calendarKey = '';
   }
 
   function saveCalendarSettings() {
@@ -126,7 +137,7 @@
 
   function saveWeekStart(value) {
     ensureCalendarSettings();
-    D.settings.calendarWeekStart = value === 'mon' ? 'mon' : 'sun';
+    D.settings.calendarWeekStart = value === 'sun' ? 'sun' : 'mon';
     saveCalendarSettings();
   }
 
@@ -134,21 +145,21 @@
     const next = new Date(dateText);
     if (Number.isNaN(next.getTime())) return;
     selectedDate = next;
-    monthCursor = new Date(next.getFullYear(), next.getMonth(), 1);
+    weekCursor = next;
     clearCalendarCache();
     renderCalendar(true);
   }
 
-  function moveMonth(delta) {
-    monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + delta, 1);
-    selectedDate = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), Math.min(selectedDate.getDate(), 28));
+  function moveWeek(delta) {
+    weekCursor = addDays(weekCursor, delta * 7);
+    selectedDate = addDays(selectedDate, delta * 7);
     clearCalendarCache();
     renderCalendar(true);
   }
 
   function goToday() {
     selectedDate = new Date();
-    monthCursor = new Date();
+    weekCursor = new Date();
     clearCalendarCache();
     renderCalendar(true);
   }
@@ -161,175 +172,232 @@
     style.textContent = `
       .calendar-strip.wordjar-study-calendar-shell{
         display:block;
+        width:100%;
+        max-width:100%;
         overflow:visible;
-        padding:12px 20px 18px;
-        margin:0 -20px;
+        padding:14px 0 18px;
+        margin:0;
         cursor:default;
       }
 
       .wordjar-study-calendar-card{
-        border:1px solid var(--bdr);
-        border-radius:28px;
-        background:var(--sur);
-        box-shadow:0 10px 28px rgba(0,0,0,.04);
-        padding:16px;
+        width:100%;
+        box-sizing:border-box;
+        border:0;
+        background:transparent;
+        box-shadow:none;
+        padding:0;
       }
 
       .wordjar-study-calendar-top{
-        display:flex;
+        display:grid;
+        grid-template-columns:44px minmax(0, 1fr) 44px;
         align-items:center;
-        justify-content:space-between;
         gap:10px;
-        margin-bottom:14px;
+        margin:4px 0 12px;
+      }
+
+      .wordjar-study-calendar-title-wrap{
+        text-align:center;
+        min-width:0;
       }
 
       .wordjar-study-calendar-title{
         color:var(--ink);
-        font-size:22px;
+        font-size:17px;
         font-weight:950;
-        letter-spacing:-.04em;
-        line-height:1.05;
+        letter-spacing:-.03em;
+        line-height:1.1;
       }
 
       .wordjar-study-calendar-subtitle{
         color:var(--ink2);
-        font-size:12px;
+        font-size:11px;
         font-weight:800;
-        margin-top:4px;
-      }
-
-      .wordjar-study-calendar-actions{
-        display:flex;
-        align-items:center;
-        gap:8px;
-      }
-
-      .wordjar-study-calendar-nav,
-      .wordjar-study-calendar-today{
-        height:38px;
-        border:1px solid var(--bdr);
-        border-radius:14px;
-        background:#fff;
-        color:var(--ink);
-        font:inherit;
-        font-size:13px;
-        font-weight:950;
-        cursor:pointer;
+        margin-top:3px;
       }
 
       .wordjar-study-calendar-nav{
-        width:38px;
-        display:grid;
-        place-items:center;
-      }
-
-      .wordjar-study-calendar-nav svg{
-        width:18px;
-        height:18px;
-        stroke-width:2.6;
-      }
-
-      .wordjar-study-calendar-today{
-        padding:0 12px;
-      }
-
-      .wordjar-study-calendar-weekdays,
-      .wordjar-study-calendar-grid{
-        display:grid;
-        grid-template-columns:repeat(7, minmax(0, 1fr));
-        gap:7px;
-      }
-
-      .wordjar-study-calendar-weekday{
-        text-align:center;
-        color:var(--ink2);
-        font-size:12px;
-        font-weight:950;
-        padding:4px 0 6px;
-      }
-
-      .wordjar-study-calendar-day{
-        position:relative;
-        aspect-ratio:1;
+        width:44px;
+        height:44px;
         border:1px solid var(--bdr);
-        border-radius:999px;
+        border-radius:16px;
         background:#fff;
         color:var(--ink);
         display:grid;
         place-items:center;
-        font:inherit;
-        font-size:15px;
-        font-weight:950;
         cursor:pointer;
-        box-shadow:none;
       }
 
-      .wordjar-study-calendar-day.is-muted{
-        opacity:.34;
+      .wordjar-study-calendar-nav svg{
+        width:20px;
+        height:20px;
+        stroke-width:2.7;
       }
 
-      .wordjar-study-calendar-day.is-studied{
-        background:var(--wordjar-calendar-accent, #0b5f08);
+      .wordjar-study-calendar-week{
+        display:grid;
+        grid-template-columns:repeat(7, minmax(0, 1fr));
+        gap:7px;
+        width:100%;
+        box-sizing:border-box;
+      }
+
+      .wordjar-study-calendar-day{
+        min-width:0;
+        min-height:104px;
+        border:1px solid var(--bdr);
+        border-radius:18px;
+        background:#fff;
+        color:var(--ink);
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-start;
+        gap:8px;
+        padding:12px 4px 10px;
+        font:inherit;
+        cursor:pointer;
+        box-sizing:border-box;
+        position:relative;
+      }
+
+      .wordjar-study-calendar-day-name{
+        color:var(--ink2);
+        font-size:10px;
+        font-weight:950;
+        letter-spacing:.02em;
+      }
+
+      .wordjar-study-calendar-day-number{
+        color:var(--ink);
+        font-size:20px;
+        font-weight:950;
+        line-height:1;
+      }
+
+      .wordjar-study-calendar-state{
+        width:28px;
+        height:28px;
+        border-radius:999px;
+        border:2px solid var(--bdr);
+        display:grid;
+        place-items:center;
+        color:transparent;
+        background:#fff;
+        margin-top:auto;
+      }
+
+      .wordjar-study-calendar-day.is-studied .wordjar-study-calendar-state{
         border-color:var(--wordjar-calendar-accent, #0b5f08);
+        background:var(--wordjar-calendar-accent, #0b5f08);
         color:#fff;
         box-shadow:0 8px 18px color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 22%, transparent);
       }
 
+      .wordjar-study-calendar-state svg{
+        width:17px;
+        height:17px;
+        stroke-width:3;
+      }
+
       .wordjar-study-calendar-day.is-today{
-        outline:3px solid color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 18%, transparent);
-        outline-offset:3px;
+        background:color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 7%, #fff);
       }
 
-      .wordjar-study-calendar-day.is-selected::after{
-        content:'';
-        position:absolute;
-        inset:-6px;
-        border:2px solid color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 34%, transparent);
-        border-radius:999px;
-        pointer-events:none;
+      .wordjar-study-calendar-day.is-today .wordjar-study-calendar-state{
+        border-color:color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 52%, #fff);
       }
 
-      .wordjar-study-calendar-day-dot{
-        position:absolute;
-        bottom:6px;
-        left:50%;
-        width:4px;
-        height:4px;
+      .wordjar-study-calendar-day.is-selected{
+        border-color:color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 38%, var(--bdr));
+        box-shadow:0 0 0 3px color-mix(in srgb, var(--wordjar-calendar-accent, #0b5f08) 10%, transparent);
+      }
+
+      .wordjar-study-calendar-due-dot{
+        width:6px;
+        height:6px;
         border-radius:999px;
-        background:currentColor;
-        transform:translateX(-50%);
-        opacity:.72;
-        pointer-events:none;
+        background:var(--wordjar-calendar-accent, #0b5f08);
+        margin-top:2px;
+        opacity:.9;
+      }
+
+      .wordjar-study-calendar-legend{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex-wrap:wrap;
+        gap:14px;
+        color:var(--ink2);
+        font-size:12px;
+        font-weight:800;
+        margin:12px 0 0;
+      }
+
+      .wordjar-study-calendar-legend-item{
+        display:flex;
+        align-items:center;
+        gap:6px;
+      }
+
+      .wordjar-study-calendar-legend-mark{
+        width:10px;
+        height:10px;
+        border-radius:999px;
+        border:2px solid var(--bdr);
+        box-sizing:border-box;
+      }
+
+      .wordjar-study-calendar-legend-mark.is-studied{
+        border-color:var(--wordjar-calendar-accent, #0b5f08);
+        background:var(--wordjar-calendar-accent, #0b5f08);
+      }
+
+      .wordjar-study-calendar-legend-mark.is-today{
+        border-color:var(--wordjar-calendar-accent, #0b5f08);
+        background:#fff;
+      }
+
+      .wordjar-study-calendar-legend-mark.is-due{
+        width:7px;
+        height:7px;
+        border:0;
+        background:var(--wordjar-calendar-accent, #0b5f08);
       }
 
       .wordjar-study-calendar-summary{
         display:grid;
-        grid-template-columns:1fr 1fr 1fr;
+        grid-template-columns:repeat(3, minmax(0, 1fr));
         gap:8px;
+        border:1px solid var(--bdr);
+        border-radius:24px;
+        background:var(--sur);
+        padding:14px;
         margin-top:14px;
+        box-sizing:border-box;
       }
 
       .wordjar-study-calendar-stat{
-        border:1px solid var(--bdr);
-        border-radius:18px;
-        background:#fff;
-        padding:10px;
         min-width:0;
       }
 
       .wordjar-study-calendar-stat-label{
         color:var(--ink2);
-        font-size:11px;
+        font-size:12px;
         font-weight:850;
         line-height:1.2;
       }
 
       .wordjar-study-calendar-stat-value{
         color:var(--ink);
-        font-size:19px;
+        font-size:18px;
         font-weight:950;
         letter-spacing:-.03em;
-        margin-top:3px;
+        margin-top:8px;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
       }
 
       .wordjar-calendar-settings-card{
@@ -466,57 +534,61 @@
       }
 
       @media (max-width:390px){
-        .wordjar-study-calendar-card{padding:14px;border-radius:24px}
-        .wordjar-study-calendar-grid,.wordjar-study-calendar-weekdays{gap:5px}
-        .wordjar-study-calendar-day{font-size:14px}
-        .wordjar-study-calendar-summary{grid-template-columns:1fr}
+        .wordjar-study-calendar-week{gap:5px}
+        .wordjar-study-calendar-day{min-height:92px;border-radius:16px;padding:10px 2px 8px}
+        .wordjar-study-calendar-day-name{font-size:9px}
+        .wordjar-study-calendar-day-number{font-size:18px}
+        .wordjar-study-calendar-state{width:24px;height:24px}
+        .wordjar-study-calendar-summary{padding:12px;border-radius:22px}
+        .wordjar-study-calendar-stat-value{font-size:16px}
       }
     `;
     document.head.appendChild(style);
   }
 
   function buildCalendarHtml() {
-    const cursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
-    const dates = getMonthDates(cursor);
+    const dates = getWeekDates(weekCursor);
     const reviewed = getSelectedReviewedCount();
     const selectedStudied = isStudiedDate(selectedDate);
-    const selectedLabel = sameDay(selectedDate, new Date()) ? 'Today' : selectedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const selectedLabel = sameDay(selectedDate, new Date()) ? 'Today' : getShortDate(selectedDate);
 
     return `
       <div class="wordjar-study-calendar-card">
         <div class="wordjar-study-calendar-top">
-          <div>
-            <div class="wordjar-study-calendar-title">${MONTH_NAMES[cursor.getMonth()]} ${cursor.getFullYear()}</div>
+          <button class="wordjar-study-calendar-nav" type="button" data-action="prev" aria-label="Previous week">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div class="wordjar-study-calendar-title-wrap">
+            <div class="wordjar-study-calendar-title">${getWeekTitle(dates)}</div>
             <div class="wordjar-study-calendar-subtitle">Tap a date to view study status</div>
           </div>
-          <div class="wordjar-study-calendar-actions">
-            <button class="wordjar-study-calendar-nav" type="button" data-action="prev" aria-label="Previous month">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <button class="wordjar-study-calendar-today" type="button" data-action="today">Today</button>
-            <button class="wordjar-study-calendar-nav" type="button" data-action="next" aria-label="Next month">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          </div>
+          <button class="wordjar-study-calendar-nav" type="button" data-action="next" aria-label="Next week">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
         </div>
 
-        <div class="wordjar-study-calendar-weekdays">
-          ${getOrderedDayNames().map(day => `<div class="wordjar-study-calendar-weekday">${day}</div>`).join('')}
-        </div>
-
-        <div class="wordjar-study-calendar-grid">
+        <div class="wordjar-study-calendar-week">
           ${dates.map(date => {
-            const mutedClass = date.getMonth() === cursor.getMonth() ? '' : ' is-muted';
-            const todayClass = sameDay(date, new Date()) ? ' is-today' : '';
             const studiedClass = isStudiedDate(date) ? ' is-studied' : '';
+            const todayClass = sameDay(date, new Date()) ? ' is-today' : '';
             const selectedClass = sameDay(date, selectedDate) ? ' is-selected' : '';
-            const dot = isStudiedDate(date) ? '<span class="wordjar-study-calendar-day-dot"></span>' : '';
+            const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>';
             return `
-              <button class="wordjar-study-calendar-day${mutedClass}${todayClass}${studiedClass}${selectedClass}" type="button" data-date="${dateKey(date)}" aria-label="Select ${dateKey(date)}">
-                <span>${date.getDate()}</span>${dot}
+              <button class="wordjar-study-calendar-day${studiedClass}${todayClass}${selectedClass}" type="button" data-date="${dateKey(date)}" aria-label="Select ${dateKey(date)}">
+                <span class="wordjar-study-calendar-day-name">${DAY_NAMES[date.getDay()]}</span>
+                <span class="wordjar-study-calendar-day-number">${date.getDate()}</span>
+                <span class="wordjar-study-calendar-state">${isStudiedDate(date) ? checkIcon : ''}</span>
+                ${isStudiedDate(date) ? '<span class="wordjar-study-calendar-due-dot"></span>' : ''}
               </button>
             `;
           }).join('')}
+        </div>
+
+        <div class="wordjar-study-calendar-legend">
+          <span class="wordjar-study-calendar-legend-item"><span class="wordjar-study-calendar-legend-mark is-studied"></span>Studied</span>
+          <span class="wordjar-study-calendar-legend-item"><span class="wordjar-study-calendar-legend-mark is-today"></span>Today</span>
+          <span class="wordjar-study-calendar-legend-item"><span class="wordjar-study-calendar-legend-mark"></span>Rest</span>
+          <span class="wordjar-study-calendar-legend-item"><span class="wordjar-study-calendar-legend-mark is-due"></span>Due</span>
         </div>
 
         <div class="wordjar-study-calendar-summary">
@@ -538,9 +610,8 @@
   }
 
   function bindCalendarEvents(el) {
-    el.querySelector('[data-action="prev"]')?.addEventListener('click', () => moveMonth(-1));
-    el.querySelector('[data-action="next"]')?.addEventListener('click', () => moveMonth(1));
-    el.querySelector('[data-action="today"]')?.addEventListener('click', goToday);
+    el.querySelector('[data-action="prev"]')?.addEventListener('click', () => moveWeek(-1));
+    el.querySelector('[data-action="next"]')?.addEventListener('click', () => moveWeek(1));
 
     el.querySelectorAll('[data-date]').forEach(button => {
       button.addEventListener('click', () => selectDate(button.dataset.date));
@@ -591,10 +662,10 @@
 
         <div class="wordjar-calendar-settings-section">
           <div class="wordjar-calendar-settings-title">Week Starts On</div>
-          <div class="wordjar-calendar-settings-desc">Choose how the Dashboard calendar is arranged.</div>
+          <div class="wordjar-calendar-settings-desc">Choose how the Dashboard week calendar is arranged.</div>
           <div class="wordjar-calendar-week-start-grid">
-            <button class="wordjar-calendar-option-btn" type="button" data-week-start="sun">Sunday</button>
             <button class="wordjar-calendar-option-btn" type="button" data-week-start="mon">Monday</button>
+            <button class="wordjar-calendar-option-btn" type="button" data-week-start="sun">Sunday</button>
           </div>
         </div>
       </div>
@@ -670,10 +741,6 @@
     }
   }
 
-  function clearCalendarCache() {
-    calendarKey = '';
-  }
-
   const originalUpdateAccount = window.updateAccount;
   window.updateAccount = function updateAccountWithCalendarSettings() {
     if (typeof originalUpdateAccount === 'function') originalUpdateAccount();
@@ -690,7 +757,8 @@
     setColor: saveCalendarColor,
     setWeekStart: saveWeekStart,
     injectSettings: injectCalendarSettingsRow,
-    getDueNowCount
+    getDueNowCount,
+    goToday
   };
 
   ensureCalendarSettings();
