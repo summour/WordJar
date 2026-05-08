@@ -1,72 +1,116 @@
-// WordJar Reader Voice TTS Bridge V1
-// Applies Reader Voice Settings to the Reader storytelling TTS right before speech starts.
+// WordJar Reader Voice TTS Bridge V2
+// Applies Reader Voice Settings to Reader storytelling TTS right before speech starts.
 
 (function installWordJarReaderVoiceTTSBridge() {
-  if (window.__wordjarReaderVoiceTTSBridgeInstalled) return;
-  window.__wordjarReaderVoiceTTSBridgeInstalled = true;
+  if (window.__wordjarReaderVoiceTTSBridgeInstalledV2) return;
+  window.__wordjarReaderVoiceTTSBridgeInstalledV2 = true;
 
   const DEFAULT_ACCENT = 'en-GB';
   const DEFAULT_SPEED = 0.8;
+  const DEFAULT_PITCH = 1;
 
-  function isReaderTTSActive() {
+  function clamp(value, min, max, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.max(min, Math.min(max, number));
+  }
+
+  function isReaderPage() {
+    return window.curPage === 'reader' || document.body?.dataset?.page === 'reader';
+  }
+
+  function isReaderTTSUtterance(utterance) {
     const btn = document.getElementById('wordjarReaderTTSButton');
-    return curPage === 'reader' && !!btn?.classList.contains('is-reading');
+    const hasReaderButton = !!btn;
+    const isReaderReading = !!btn?.classList.contains('is-reading') ||
+      !!btn?.classList.contains('is-paused');
+
+    return !!utterance && isReaderPage() && (hasReaderButton || isReaderReading);
   }
 
   function ensureSettings() {
     if (window.WordJarReaderVoiceSettings?.ensure) {
-      WordJarReaderVoiceSettings.ensure();
+      window.WordJarReaderVoiceSettings.ensure();
       return;
     }
 
+    window.D = window.D || {};
     D.profile = D.profile || {};
+
     if (!D.profile.readerVoiceAccent) D.profile.readerVoiceAccent = DEFAULT_ACCENT;
+
     const speed = Number(D.profile.readerVoiceSpeed);
-    if (!Number.isFinite(speed) || speed < 0.5 || speed > 1.25) D.profile.readerVoiceSpeed = DEFAULT_SPEED;
+    if (!Number.isFinite(speed) || speed < 0.5 || speed > 1.5) {
+      D.profile.readerVoiceSpeed = DEFAULT_SPEED;
+    }
+
+    const pitch = Number(D.profile.readerVoicePitch);
+    if (!Number.isFinite(pitch) || pitch < 0.7 || pitch > 1.3) {
+      D.profile.readerVoicePitch = DEFAULT_PITCH;
+    }
   }
 
-  function getAccent() {
+  function getResolvedStyle() {
     ensureSettings();
-    return window.WordJarReaderVoiceSettings?.getAccent?.() || D.profile?.readerVoiceAccent || DEFAULT_ACCENT;
-  }
 
-  function getSpeed() {
-    ensureSettings();
-    const speed = window.WordJarReaderVoiceSettings?.getSpeed?.() || Number(D.profile?.readerVoiceSpeed || DEFAULT_SPEED);
-    return Math.max(0.5, Math.min(1.25, speed));
+    const resolved = window.WordJarReaderVoiceSettings
+      ?.getResolvedStyle?.('reader');
+
+    return {
+      accent: resolved?.accent || D.profile?.readerVoiceAccent || DEFAULT_ACCENT,
+      speed: clamp(
+        resolved?.speed ?? D.profile?.readerVoiceSpeed,
+        0.5,
+        1.5,
+        DEFAULT_SPEED
+      ),
+      pitch: clamp(
+        resolved?.pitch ?? D.profile?.readerVoicePitch,
+        0.7,
+        1.3,
+        DEFAULT_PITCH
+      )
+    };
   }
 
   function chooseVoice(accent) {
     if (window.WordJarReaderVoiceSettings?.chooseVoice) {
-      return WordJarReaderVoiceSettings.chooseVoice(accent);
+      return window.WordJarReaderVoiceSettings.chooseVoice(accent, 'reader');
     }
 
     const voices = window.speechSynthesis?.getVoices?.() || [];
-    return voices.find(voice => voice.lang === accent) ||
-      voices.find(voice => String(voice.lang || '').toLowerCase().startsWith(String(accent || '').toLowerCase())) ||
-      voices.find(voice => /^en-GB/i.test(voice.lang || '')) ||
+    const normalizedAccent = String(accent || DEFAULT_ACCENT).toLowerCase();
+
+    return voices.find(voice =>
+      String(voice.lang || '').toLowerCase() === normalizedAccent
+    ) ||
+      voices.find(voice =>
+        String(voice.lang || '').toLowerCase().startsWith(normalizedAccent)
+      ) ||
       voices.find(voice => /^en/i.test(voice.lang || '')) ||
       null;
   }
 
   function applyReaderVoiceSettings(utterance) {
-    if (!utterance || !isReaderTTSActive()) return utterance;
+    if (!isReaderTTSUtterance(utterance)) return utterance;
 
-    const accent = getAccent();
-    utterance.lang = accent;
-    utterance.rate = getSpeed();
-    utterance.pitch = 1;
+    const style = getResolvedStyle();
+    utterance.lang = style.accent;
+    utterance.rate = style.speed;
+    utterance.pitch = style.pitch;
 
-    const voice = chooseVoice(accent);
+    const voice = chooseVoice(style.accent);
     if (voice) utterance.voice = voice;
+
     return utterance;
   }
 
   function patchSpeak() {
-    if (!window.speechSynthesis || window.speechSynthesis.__wordjarReaderVoiceSpeakPatched) return;
+    if (!window.speechSynthesis) return;
+    if (window.speechSynthesis.__wordjarReaderVoiceSpeakPatchedV2) return;
 
     const originalSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis);
-    window.speechSynthesis.__wordjarReaderVoiceSpeakPatched = true;
+    window.speechSynthesis.__wordjarReaderVoiceSpeakPatchedV2 = true;
 
     window.speechSynthesis.speak = function speakWithReaderVoiceSettings(utterance) {
       return originalSpeak(applyReaderVoiceSettings(utterance));
@@ -81,4 +125,10 @@
   boot();
   setTimeout(boot, 0);
   setTimeout(boot, 300);
+
+  if (window.speechSynthesis?.addEventListener) {
+    window.speechSynthesis.addEventListener('voiceschanged', () => {
+      chooseVoice(getResolvedStyle().accent);
+    });
+  }
 })();
