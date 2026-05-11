@@ -9,56 +9,57 @@
 }
 
 .app .main-header {
-  position: sticky;
-  top: 0;
-  z-index: 220;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 62px;
-  padding: 14px 20px 12px;
-  border-bottom: 0;
-  background: rgba(250, 250, 250, 0.86);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  overflow: visible;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 220 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  min-height: 62px !important;
+  padding: 14px 20px 12px !important;
+  border-bottom: 0 !important;
+  background: rgba(250, 250, 250, 0.86) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  overflow: visible !important;
 }
 
 .app .brand {
-  max-width: none;
-  flex: 0 0 auto;
-  font-size: clamp(1.45rem, 5.4vw, 2.1rem);
-  font-weight: 800;
-  letter-spacing: -0.05em;
-  line-height: 1;
-  text-align: center;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+  font-size: clamp(1.45rem, 5.4vw, 2.1rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.05em !important;
+  line-height: 1 !important;
+  text-align: center !important;
 }
 
 .app .top-nav {
-  position: fixed;
-  left: 50%;
-  right: auto;
-  bottom: var(--wordjar-dock-bottom);
-  z-index: 260;
-  width: min(calc(100vw - 42px), 430px);
-  height: var(--wordjar-dock-height);
-  min-width: 0;
-  max-width: 430px;
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: var(--wordjar-dock-bottom) !important;
+  z-index: 260 !important;
+  width: min(calc(100vw - 42px), 430px) !important;
+  height: var(--wordjar-dock-height) !important;
+  min-width: 0 !important;
+  max-width: 430px !important;
   display: grid !important;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: center;
-  justify-items: center;
-  gap: 2px;
-  padding: 8px;
-  border: 1px solid rgba(228, 228, 231, 0.78);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(22px) saturate(1.35);
-  -webkit-backdrop-filter: blur(22px) saturate(1.35);
-  transform: translateX(-50%);
-  overflow: hidden;
-  box-sizing: border-box;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  gap: 2px !important;
+  padding: 8px !important;
+  border: 1px solid rgba(228, 228, 231, 0.78) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(22px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.35) !important;
+  transform: translateX(-50%) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  flex: initial !important;
 }
 
 .app .top-btn {
@@ -75,7 +76,7 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: background 0.18s ease, transform 0.18s ease;
+  transition: background 0.18s ease, transform 0.18s ease !important;
 }
 
 .app .top-btn.active {
@@ -84,7 +85,7 @@
 
 .app .top-btn:active {
   background: rgba(17, 17, 17, 0.11) !important;
-  transform: scale(0.96);
+  transform: scale(0.96) !important;
 }
 
 .app .top-btn svg,
@@ -98,7 +99,7 @@
 .app .page {
   padding-bottom: calc(
     var(--wordjar-dock-height) + 42px + env(safe-area-inset-bottom, 0px)
-  );
+  ) !important;
 }
 
 .app #cardSelectActions.select-action-bar {
@@ -113,13 +114,13 @@
   }
 
   .app .main-header {
-    min-height: 58px;
-    padding: 12px 16px 10px;
+    min-height: 58px !important;
+    padding: 12px 16px 10px !important;
   }
 
   .app .top-nav {
-    width: min(calc(100vw - 34px), 396px);
-    padding: 7px;
+    width: min(calc(100vw - 34px), 396px) !important;
+    padding: 7px !important;
   }
 
   .app .top-btn {
@@ -138,9 +139,9 @@
 
 @media (max-width: 380px) {
   .app .top-nav {
-    width: min(calc(100vw - 26px), 360px);
-    gap: 0;
-    padding: 6px;
+    width: min(calc(100vw - 26px), 360px) !important;
+    gap: 0 !important;
+    padding: 6px !important;
   }
 
   .app .top-btn {
