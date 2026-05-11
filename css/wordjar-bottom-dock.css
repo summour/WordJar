@@ -1,0 +1,158 @@
+/* WordJar bottom dock navigation
+   Converts the header menu icons into a floating iOS-style dock.
+   The header keeps only the WordJar brand; navigation lives at the bottom.
+*/
+
+:root {
+  --wordjar-dock-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  --wordjar-dock-height: 70px;
+}
+
+.app .main-header {
+  position: sticky;
+  top: 0;
+  z-index: 220;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 62px;
+  padding: 14px 20px 12px;
+  border-bottom: 0;
+  background: rgba(250, 250, 250, 0.86);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  overflow: visible;
+}
+
+.app .brand {
+  max-width: none;
+  flex: 0 0 auto;
+  font-size: clamp(1.45rem, 5.4vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  text-align: center;
+}
+
+.app .top-nav {
+  position: fixed;
+  left: 50%;
+  right: auto;
+  bottom: var(--wordjar-dock-bottom);
+  z-index: 260;
+  width: min(calc(100vw - 42px), 430px);
+  height: var(--wordjar-dock-height);
+  min-width: 0;
+  max-width: 430px;
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid rgba(228, 228, 231, 0.78);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  transform: translateX(-50%);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.app .top-btn {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 0 !important;
+  min-height: 52px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #151515 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.app .top-btn.active {
+  background: rgba(17, 17, 17, 0.08) !important;
+}
+
+.app .top-btn:active {
+  background: rgba(17, 17, 17, 0.11) !important;
+  transform: scale(0.96);
+}
+
+.app .top-btn svg,
+.app #tb-reader svg,
+.app #tb-mushy-chat svg {
+  width: 25px !important;
+  height: 25px !important;
+  stroke-width: 2.35 !important;
+}
+
+.app .page {
+  padding-bottom: calc(
+    var(--wordjar-dock-height) + 42px + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.app #cardSelectActions.select-action-bar {
+  bottom: calc(
+    var(--wordjar-dock-height) + 28px + env(safe-area-inset-bottom, 0px)
+  ) !important;
+}
+
+@media (max-width: 430px) {
+  :root {
+    --wordjar-dock-height: 68px;
+  }
+
+  .app .main-header {
+    min-height: 58px;
+    padding: 12px 16px 10px;
+  }
+
+  .app .top-nav {
+    width: min(calc(100vw - 34px), 396px);
+    padding: 7px;
+  }
+
+  .app .top-btn {
+    width: 50px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+  }
+
+  .app .top-btn svg,
+  .app #tb-reader svg,
+  .app #tb-mushy-chat svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .app .top-nav {
+    width: min(calc(100vw - 26px), 360px);
+    gap: 0;
+    padding: 6px;
+  }
+
+  .app .top-btn {
+    width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+
+  .app .top-btn svg,
+  .app #tb-reader svg,
+  .app #tb-mushy-chat svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+}
