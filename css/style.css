@@ -2,7 +2,7 @@
    MAIN ENTRY — WordJar modular CSS
 
    index.html loads this file directly.
-   Load order matters: base → components → layout → pages → deck-cards → flashcard → modals → share → fixes → theme → popup width → black accent → background tuning → feature modules → final iOS type scale → responsive web → compact top nav → Mushy unified header → Mushy chat background → detail actions fix
+   Load order matters: base → components → layout → pages → deck-cards → flashcard → modals → share → fixes → theme → popup width → black accent → background tuning → feature modules → final iOS type scale → responsive web → compact top nav → Mushy unified header → Mushy chat background → detail actions fix → bottom dock
    ═══════════════════════════════════════════ */
 
 @import url('base.css');
@@ -28,3 +28,4 @@
 @import url('wordjar-mushy-chat-bg.css');
 @import url('wordjar-detail-actions-fix.css');
 @import url('wordjar-deck-options-center.css');
+@import url('wordjar-bottom-dock.css');
