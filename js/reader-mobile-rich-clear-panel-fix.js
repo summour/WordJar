@@ -21,7 +21,7 @@
     style.id = STYLE_ID;
     style.textContent = `
       .reader-panel.open {
-        z-index: 900;
+        z-index: 1805;
         pointer-events: auto;
       }
 
