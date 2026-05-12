@@ -1,96 +1,62 @@
 // WordJar public runtime hooks.
 
-(function installMushyLearningAnalysisMode() {
-  if (window.__wordjarMushyLearningAnalysisModeInstalled) return;
-  window.__wordjarMushyLearningAnalysisModeInstalled = true;
+(function installWordJarPlainAnalysisMode() {
+  if (window.__wordjarPlainAnalysisModeInstalled) return;
+  window.__wordjarPlainAnalysisModeInstalled = true;
 
-  const ANALYSIS_INSTRUCTION = `
-Mushy response mode: English learning analyst, not casual chat.
+  const GUIDE = `
+You are an English learning analyst inside WordJar.
+Do not use a mascot persona. Do not use cat wording. Do not add cute filler.
+Respond in Thai by default.
 
-Respond in Thai by default. Be accurate, structured, and useful for real English learning.
-When the user sends a word, sentence, lyric, subtitle, or Reader text, answer in this exact Markdown style whenever relevant:
+For a word, phrase, subtitle, lyric, or Reader text, use this format:
 
-# การแปล
-"แปลไทยแบบธรรมชาติและตรงบริบท"
+การแปล
+แปลไทยแบบธรรมชาติและตรงบริบท 1-2 ประโยค
 
-# คำศัพท์
-1. **Word or phrase** [IPA if useful] - ความหมายไทย, คำอธิบายสั้น ๆ หรือ label เช่น สำนวน/คำสแลง/คำหยาบ
-2. **Word or phrase** [IPA if useful] - ความหมายไทย
+ความหมายในบริบท
+อธิบายว่าข้อความนี้สื่ออะไรจริง ๆ เป็นย่อหน้าเดียว
 
-# การวิเคราะห์ไวยากรณ์
-1. **Grammar / phrase name**: อธิบายหน้าที่ โครงสร้าง หรือสำนวนในประโยค
-2. **Ellipsis / tense / word order / emphasis**: อธิบายสิ่งที่ผู้เรียนควรรู้
+คำศัพท์และวลีสำคัญ
+- **useful phrase** [IPA only if sure] - ความหมายไทย + label เช่น idiom / slang / informal
+- **another useful item** - ความหมายไทย
 
-# ความรู้สำคัญอื่น ๆ
-1. **บริบท / Nuance**: อธิบายความหมายแฝงหรือบริบทการใช้
-2. **น้ำเสียง (Tone)**: บอกว่าเป็นทางการ ภาษาพูด หยาบ เย่อหยิ่ง ประชด ฯลฯ
-3. **ข้อควรระวัง**: บอกว่าใช้ได้หรือไม่ควรใช้ในสถานการณ์ไหน
+ไวยากรณ์
+อธิบายโครงสร้างสำคัญเป็นย่อหน้า ไม่แตก list ยาว ถ้ามีการละคำ ให้บอกประโยคเต็ม
+
+น้ำเสียงและข้อควรระวัง
+อธิบาย tone, register, warning และสถานการณ์ที่ควรหรือไม่ควรใช้
+
+Flashcards ที่ควรเก็บ
+เลือกเฉพาะคำหรือวลีที่มีค่าต่อการเรียน 2-5 รายการ
 
 Rules:
-- This is a chat for learning English, so detailed answers are allowed.
-- Do not make the answer too casual or childish.
-- Keep Mushy personality minimal; do not force meow or emoji.
-- For lyrics/subtitles, explain the meaning in context, slang, idiom, grammar, and tone.
-- Include simple words only if they are part of the phrase or useful for the learner.
-- Prefer useful phrases and idioms over isolated tiny words.
-- If a word is rude, sexual, insulting, slang, or informal, say so clearly.
-- Use IPA only when helpful; do not fake IPA if unsure.
-- Do not add "อยากเรียนคำอื่นไหม" unless the analysis is already complete.
+- Do not use Markdown # headings.
+- Do not use long numbered lists outside vocabulary or flashcards.
+- Do not explain tiny basic words unless they are part of a useful phrase.
+- Prefer idioms, collocations, phrase patterns, tone, and nuance.
+- Do not add follow-up filler questions.
 
-Example style to imitate:
-# การแปล
-"กิ๊กของคุณก็อยู่นอกเหนือระดับที่คุณจะเอื้อมถึงเหมือนกัน"
-
-# คำศัพท์
-1. **Side bitch** [saɪd bɪtʃ] - กิ๊ก, ผู้หญิงอีกคนที่คบซ้อน (คำสแลง/หยาบ)
-2. **Out of your league** [aʊt əv jɔːr liːɡ] - อยู่เหนือระดับที่คุณจะเอื้อมถึง, ดีเกินกว่าคุณจะเหมาะสมด้วย (สำนวน)
-3. **League** [liːɡ] - ระดับ, ชั้น, กลุ่ม; ในบริบทความสัมพันธ์หมายถึงระดับความเหมาะสมหรือสถานะ
-4. **Too** [tuː] - ด้วย, เช่นกัน
-
-# การวิเคราะห์ไวยากรณ์
-1. **Out of your league**: เป็นสำนวนที่ใช้บอกว่าใครบางคนดูดีเกินไป มีสถานะสูงเกินไป หรืออยู่คนละระดับกับผู้พูด/ผู้ถูกพูดถึง
-2. **การละกริยา (Ellipsis)**: ประโยคเต็มคือ *Side bitch is out of your league too* แต่ในเพลงละคำว่า “is” เพื่อให้สั้นและเข้าจังหวะ
-3. **Too**: วางท้ายประโยคเพื่อเน้นว่าเรื่องนี้เกิดขึ้น “เหมือนกัน/ด้วย”
-
-# ความรู้สำคัญอื่น ๆ
-1. **บริบทของคำว่า League**: มาจากแนวคิดเรื่องระดับหรือกลุ่มความสามารถ เมื่อนำมาใช้กับความสัมพันธ์จึงหมายถึงความเหมาะสมหรือสถานะของคน
-2. **น้ำเสียง (Tone)**: หยาบ เย่อหยิ่ง และใช้กดอีกฝ่าย
-3. **ข้อควรระวัง**: คำว่า “bitch” หยาบและไม่สุภาพ ควรเข้าใจไว้เพื่อฟังเพลง/หนัง แต่ไม่ควรใช้ในสถานการณ์ทั่วไปหรือกับคนไม่สนิท
-
-User's actual message follows:
+User message:
 `;
-
-  function shouldUseLearningMode(input = {}) {
-    const task = String(input.task || 'chat');
-    const text = `${input.question || ''} ${input.contextText || ''}`.trim();
-    if (!text) return false;
-    return task === 'reader' || task === 'deck' || task === 'chat';
-  }
 
   function patchMushyAI() {
     const ai = window.WordJarMushyAI;
-    if (!ai || typeof ai.ask !== 'function' || ai.__learningAnalysisPatched) return false;
+    if (!ai || typeof ai.ask !== 'function' || ai.__plainAnalysisPatched) return false;
 
     const originalAsk = ai.ask.bind(ai);
-
-    ai.ask = function askWithLearningAnalysis(input = {}) {
-      if (!shouldUseLearningMode(input)) return originalAsk(input);
-
-      const originalQuestion = String(input.question || input.message || '').trim();
-      const question = originalQuestion.startsWith('Mushy response mode:')
-        ? originalQuestion
-        : `${ANALYSIS_INSTRUCTION}${originalQuestion}`;
-
+    ai.ask = function askPlainAnalysis(input = {}) {
+      const raw = String(input.question || input.message || '').trim();
       return originalAsk({
         ...input,
-        question,
+        question: `${GUIDE}${raw}`,
         preferSmart: true,
-        maxOutputTokens: Math.max(Number(input.maxOutputTokens || 0), 3200),
-        temperature: input.temperature ?? 0.2
+        maxOutputTokens: 3200,
+        temperature: 0.15
       });
     };
 
-    ai.__learningAnalysisPatched = true;
+    ai.__plainAnalysisPatched = true;
     return true;
   }
 
@@ -100,5 +66,5 @@ User's actual message follows:
     if (patchMushyAI()) clearInterval(timer);
   }, 120);
 
-  setTimeout(() => clearInterval(timer), 12000);
+  setTimeout(() => clearInterval(timer), 60000);
 })();
