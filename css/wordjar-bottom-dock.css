@@ -45,7 +45,7 @@ html body .app .top-nav {
   right: auto !important;
   bottom: var(--wordjar-dock-bottom) !important;
   left: 50% !important;
-  z-index: 260 !important;
+  z-index: 1700 !important;
   width: min(calc(100vw - 42px), 430px) !important;
   height: var(--wordjar-dock-height) !important;
   min-width: 0 !important;
