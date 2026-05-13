@@ -1,6 +1,6 @@
-# WordJar
+# Jarble
 
-WordJar is a mobile-first, local-first flashcard web app for language learners. It is inspired by Anki, but designed to make adding vocabulary faster, cleaner, and easier for self-learners.
+Jarble is a mobile-first, local-first flashcard web app for language learners. It is inspired by Anki, but designed to make adding vocabulary faster, cleaner, and easier for self-learners.
 
 The app currently focuses on vocabulary collection, deck-based review, study flow, Reader support, and Mushy AI assistance while keeping the core learning data usable offline through browser storage.
 
@@ -8,7 +8,7 @@ The app currently focuses on vocabulary collection, deck-based review, study flo
 
 ## Current Status
 
-WordJar is in prototype / early development.
+Jarble is in prototype / early development.
 
 The project is currently a static web app built with:
 
@@ -46,7 +46,7 @@ The app started as a mostly single-file web app, but it is now being gradually r
 
 ## Firebase Setup (Optional)
 
-WordJar supports optional cloud backup and AI features through Firebase. To enable these features:
+Jarble supports optional cloud backup and AI features through Firebase. To enable these features:
 
 1. Create a Firebase project at https://console.firebase.google.com/
 2. Enable Authentication with Google sign-in
@@ -63,7 +63,7 @@ The app works fully offline without Firebase configuration.
 ## Current Architecture
 
 ```text
-WordJar-/
+Jarble-/
 ├─ index.html
 ├─ css/
 │  ├─ style.css
@@ -111,11 +111,11 @@ WordJar-/
 
 ## Local-First Data Model
 
-WordJar currently uses a local-first data model.
+Jarble currently uses a local-first data model.
 
 - Local browser data is the primary working copy.
-- Main app data is stored in `localStorage` under `wordjar_v4`.
-- Export JSON creates a full offline backup of WordJar data.
+- Main app data is stored in `localStorage` under `wordjar_v4` for backward compatibility with existing users.
+- Export JSON creates a full offline backup of Jarble data.
 - Import JSON restores a backup and replaces the current local data.
 - Save to Cloud uploads the current device data to Firebase.
 - Load from Cloud downloads the cloud backup and replaces the current local data.
@@ -127,7 +127,7 @@ Cloud-first automatic sync is a future option, but it should only be considered 
 
 ## Main Data Shape
 
-The main app state is stored as one WordJar data object.
+The main app state is stored as one Jarble data object.
 
 ```json
 {
@@ -185,7 +185,7 @@ Recommended future vocabulary database fields:
 
 ## Business Logic Refactoring
 
-WordJar now includes a separated business logic layer:
+Jarble now includes a separated business logic layer:
 
 ```text
 js/wordjar-business-logic.js
@@ -221,7 +221,7 @@ UI logic       = DOM updates, rendering, toast, modal, navigation
 
 ## Mushy AI
 
-Mushy is WordJar's AI vocabulary tutor.
+Mushy is Jarble's AI vocabulary tutor.
 
 Current Mushy responsibilities:
 
@@ -264,7 +264,7 @@ Current Reader-related direction:
 
 ## Profile and Pixel Character Direction
 
-WordJar is planned to have a stronger profile system using original pixel characters.
+Jarble is planned to have a stronger profile system using original pixel characters.
 
 Profile goals:
 
@@ -293,7 +293,7 @@ Project coding rules:
 - Keep it DRY: do not repeat the same logic in many places.
 - Use meaningful names.
 - Keep functions focused on one responsibility.
-- New CSS classes should use the `wordjar-` prefix.
+- New CSS classes should use the `wordjar-` prefix until the CSS namespace is intentionally migrated.
 - Prefer scoped CSS over global overrides.
 - Avoid `!important`.
 - Do not hardcode private API keys.
@@ -354,7 +354,7 @@ docs/BUSINESS_LOGIC_REFACTORING.md
 
 ## Project Owner
 
-Sum is the founder and product owner of WordJar. Sum defines the learning experience, product direction, visual identity, and feature priorities.
+Sum is the founder and product owner of Jarble. Sum defines the learning experience, product direction, visual identity, and feature priorities.
 
 ---
 
@@ -371,7 +371,7 @@ Sum is the founder and product owner of WordJar. Sum defines the learning experi
 
 ## Current Goal
 
-Make WordJar safer, easier to edit, and clearer for users.
+Make Jarble safer, easier to edit, and clearer for users.
 
 Current engineering focus:
 
