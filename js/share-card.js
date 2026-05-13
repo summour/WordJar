@@ -209,7 +209,7 @@ function fillShareCard(w, options = getShareCardOptions()) {
   document.getElementById('shareCardExample').textContent = `“${exampleText.replace(/^["“]|["”]$/g, '')}”`;
   document.getElementById('shareCardNotes').textContent = notesText;
   document.getElementById('shareCardDeck').textContent = getDeckNameForShare(w.deckId);
-  document.getElementById('shareCardWatermark').textContent = 'jarble';
+  document.getElementById('shareCardWatermark').textContent = 'wordjar';
 
   setDisplayById('shareCardType', options.type, 'flex');
 
@@ -315,7 +315,7 @@ async function createDetailCardImageFile(options = getShareCardOptions()) {
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1));
   if (!blob) throw new Error('Could not create image');
 
-  return new File([blob], `jarble-${getSafeFileName(w.word)}.png`, {
+  return new File([blob], `wordjar-${getSafeFileName(w.word)}.png`, {
     type: 'image/png'
   });
 }
@@ -334,7 +334,7 @@ async function shareAdjustedDetailWord() {
 
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
-        title: `Jarble: ${w.word}`,
+        title: `WordJar: ${w.word}`,
         text: `${w.word} — ${w.meaning || ''}`,
         files: [file]
       });
@@ -373,7 +373,7 @@ async function shareDetailWord() {
 
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
-        title: `Jarble: ${w.word}`,
+        title: `WordJar: ${w.word}`,
         text: `${w.word} — ${w.meaning || ''}`,
         files: [file]
       });
